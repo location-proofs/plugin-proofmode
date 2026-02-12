@@ -49,6 +49,11 @@ export function createStampFromBundle(bundle: ParsedBundle, pluginVersion: strin
     allSignals['SafetyNet.JWT'] = bundle.safetyNetToken;
   }
 
+  // Add DeviceCheck info if present (iOS)
+  if (bundle.deviceCheckAttestation) {
+    allSignals['DeviceCheck.Attestation'] = bundle.deviceCheckAttestation;
+  }
+
   // Note presence of OTS proof
   if (bundle.otsProof) {
     allSignals['HasOTS'] = true;
@@ -71,7 +76,7 @@ export function createStampFromBundle(bundle: ParsedBundle, pluginVersion: strin
       type: 'Point',
       coordinates: [lon, lat], // GeoJSON: [lon, lat]
     },
-    srs: 'EPSG:4326',
+    srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
     temporalFootprint: {
       start: startTime,
       end: endTime,
