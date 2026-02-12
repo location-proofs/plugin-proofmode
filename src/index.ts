@@ -3,28 +3,27 @@
 /**
  * ProofMode Location Proof Plugin
  *
- * Adapter layer for ProofMode proof bundles. Accepts proof bundles
- * (however they arrive — app export, file share, API upload), extracts
- * location evidence, verifies structure, and evaluates against claims.
+ * Parses and verifies ProofMode proof bundles (ZIP archives from ProofMode mobile app).
+ * Supports two verification paths:
+ * - Destructured: Extract essentials only (~15-20KB), discard media files
+ * - Un-destructured: Preserve full original bundle for forensic integrity
  *
- * The plugin implements verify, evaluate, and create. It does NOT implement
+ * The plugin implements verify and create. It does NOT implement
  * collect or sign because ProofMode handles those internally on the device.
- * The React Native bridge (Phase 3) will add collect/sign support.
+ *
+ * Evaluation (spatial/temporal scoring) is handled by the SDK's ProofsModule.verify().
  */
 
 import type {
   LocationProofPlugin,
   Runtime,
   LocationStamp,
-  LocationClaim,
   StampVerificationResult,
-  CredibilityVector,
 } from '@decentralized-geo/astral-sdk/plugins';
 
 import { parseBundle } from './parse';
 import { createStampFromBundle } from './create';
 import { verifyProofModeStamp } from './verify';
-import { evaluateProofModeStamp } from './evaluate';
 import type { ParsedBundle } from './types';
 
 export class ProofModePlugin implements LocationProofPlugin {
@@ -60,13 +59,6 @@ export class ProofModePlugin implements LocationProofPlugin {
   async verify(stamp: LocationStamp): Promise<StampVerificationResult> {
     return verifyProofModeStamp(stamp);
   }
-
-  /**
-   * Evaluate how well a ProofMode stamp supports a location claim.
-   */
-  async evaluate(stamp: LocationStamp, claim: LocationClaim): Promise<CredibilityVector> {
-    return evaluateProofModeStamp(stamp, claim);
-  }
 }
 
 // Re-export types and utilities for direct use
@@ -74,4 +66,3 @@ export type { ParsedBundle, ProofModeSignals, ProofModeMetadata, SafetyNetResult
 export { parseBundle } from './parse';
 export { createStampFromBundle } from './create';
 export { verifyProofModeStamp, parseSafetyNetJWT } from './verify';
-export { evaluateProofModeStamp } from './evaluate';
