@@ -70,6 +70,17 @@ const ALIASES: Record<string, string> = {
   timestamp: 'Timestamp',
   'proof generated': 'ProofGenerated',
   proofgenerated: 'ProofGenerated',
+
+  // 2016-era ProofMode field names (sample-proof-1 format)
+  currentdatetime0gmt: 'Timestamp',
+  sha256: 'FileHash',
+  file: 'File.Name',
+  modified: 'File.Modified',
+  language: 'Language',
+  locale: 'Locale',
+  datatype: 'DataType',
+  networktype: 'Network',
+  screensize: 'ScreenSize',
 };
 
 /**

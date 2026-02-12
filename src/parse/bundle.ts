@@ -29,6 +29,7 @@ import { parseJSON } from './json';
 /** Known media file extensions (lowercase, with leading dot). */
 const MEDIA_EXTENSIONS = new Set([
   '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.heic', '.heif',
+  '.tiff', '.tif', '.avif',
   '.mp4', '.mov', '.avi', '.mkv', '.webm', '.3gp',
   '.mp3', '.wav', '.aac', '.ogg', '.m4a',
 ]);
