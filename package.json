@@ -1,7 +1,17 @@
 {
-  "name": "@decentralized-geo/plugin-proofmode",
+  "name": "@location-proofs/plugin-proofmode",
   "version": "0.1.0-alpha.0",
   "description": "ProofMode location proof plugin for Astral SDK",
+  "license": "MIT",
+  "author": "Astral Protocol",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/location-proofs/plugin-proofmode.git"
+  },
+  "homepage": "https://github.com/location-proofs/plugin-proofmode#readme",
+  "bugs": {
+    "url": "https://github.com/location-proofs/plugin-proofmode/issues"
+  },
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
