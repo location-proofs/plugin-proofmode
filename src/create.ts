@@ -59,9 +59,18 @@ export function createStampFromBundle(bundle: ParsedBundle, pluginVersion: strin
     allSignals['HasOTS'] = true;
   }
 
-  // Note presence of PGP key
+  // PGP provenance: key presence flag + actual key and signature as evidence
   if (bundle.publicKey) {
     allSignals['HasPGPKey'] = true;
+    allSignals['PGP.PublicKey'] = bundle.publicKey;
+  }
+
+  if (bundle.metadataSignature && bundle.metadataSignature.length > 0) {
+    let binary = '';
+    for (let i = 0; i < bundle.metadataSignature.length; i++) {
+      binary += String.fromCharCode(bundle.metadataSignature[i]);
+    }
+    allSignals['PGP.MetadataSignature'] = btoa(binary);
   }
 
   // File hash for integrity

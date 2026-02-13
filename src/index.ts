@@ -8,8 +8,8 @@
  * - Destructured: Extract essentials only (~15-20KB), discard media files
  * - Un-destructured: Preserve full original bundle for forensic integrity
  *
- * The plugin implements verify and create. It does NOT implement
- * collect or sign because ProofMode handles those internally on the device.
+ * The plugin implements verify, create, and sign. It does NOT implement
+ * collect because ProofMode handles that internally on the device.
  *
  * Evaluation (spatial/temporal scoring) is handled by the SDK's ProofsModule.verify().
  */
@@ -18,6 +18,8 @@ import type {
   LocationProofPlugin,
   Runtime,
   LocationStamp,
+  UnsignedLocationStamp,
+  StampSigner,
   StampVerificationResult,
 } from '@decentralized-geo/astral-sdk/plugins';
 
@@ -51,6 +53,25 @@ export class ProofModePlugin implements LocationProofPlugin {
    */
   createStampFromBundle(bundle: ParsedBundle) {
     return createStampFromBundle(bundle, this.version);
+  }
+
+  /**
+   * Cryptographically sign an unsigned stamp.
+   *
+   * ProofModePlugin doesn't manage keys — a StampSigner is required.
+   */
+  async sign(stamp: UnsignedLocationStamp, signer: StampSigner): Promise<LocationStamp> {
+    const data = JSON.stringify(stamp);
+    const sigValue = await signer.sign(data);
+    return {
+      ...stamp,
+      signatures: [{
+        signer: signer.signer,
+        algorithm: signer.algorithm,
+        value: sigValue,
+        timestamp: Math.floor(Date.now() / 1000),
+      }],
+    };
   }
 
   /**
