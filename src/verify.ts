@@ -152,7 +152,7 @@ export async function verifyProofModeStamp(
     const locationTime = stamp.signals['Location.Time'] as number | undefined;
     if (locationTime && stamp.temporalFootprint) {
       // Location.Time is in milliseconds, temporalFootprint in seconds
-      const locationTimeSec = locationTime > 1e12 ? locationTime / 1000 : locationTime;
+      const locationTimeSec = locationTime > 1e12 ? Math.floor(locationTime / 1000) : locationTime;
       const drift = Math.abs(locationTimeSec - stamp.temporalFootprint.start);
       if (drift > 3600) {
         signalsConsistent = false;
