@@ -1,9 +1,18 @@
 // Copyright © 2026 Sophia Systems Corporation
 
+import * as fs from 'fs';
+import * as path from 'path';
 import { parseBundle } from '../parse';
+import { createStampFromBundle } from '../create';
 import { parseCSV } from '../parse/csv';
 import { parseJSON } from '../parse/json';
 import { createSyntheticBundle } from './fixtures/create-fixture';
+
+const FIXTURES_DIR = path.join(__dirname, 'fixtures');
+const PRIVATE_BUNDLE = path.join(FIXTURES_DIR, 'private-837e10d85e25f6e2-2026-02-12-22-38-11GMT.zip');
+const SAMPLE_2016_BUNDLE = path.join(FIXTURES_DIR, 'sample-2016-IMG_20161214_072053.zip');
+const hasPrivateBundle = fs.existsSync(PRIVATE_BUNDLE);
+const hasSample2016 = fs.existsSync(SAMPLE_2016_BUNDLE);
 
 describe('ProofMode parser', () => {
   describe('parseBundle', () => {
@@ -182,6 +191,97 @@ describe('ProofMode parser', () => {
       });
       const result = parseJSON(json);
       expect(result.signals['Location.Latitude']).toBe(40.7484);
+    });
+  });
+
+  // Real bundle tests — run only when fixture files are present
+  describe('real iOS bundle (private)', () => {
+    const skipMsg = 'private bundle not available';
+
+    (hasPrivateBundle ? it : it.skip)('parses bundle without errors', () => {
+      const zip = fs.readFileSync(PRIVATE_BUNDLE);
+      const bundle = parseBundle(new Uint8Array(zip));
+
+      expect(bundle.metadata.format).toBe('csv');
+      expect(bundle.files.length).toBeGreaterThanOrEqual(5);
+    });
+
+    (hasPrivateBundle ? it : it.skip)('extracts iOS-specific artifacts', () => {
+      const zip = fs.readFileSync(PRIVATE_BUNDLE);
+      const bundle = parseBundle(new Uint8Array(zip));
+
+      expect(bundle.publicKey).toContain('BEGIN PGP PUBLIC KEY BLOCK');
+      expect(bundle.deviceCheckAttestation).toBeTruthy();
+      expect(bundle.otsProof).toBeTruthy();
+      expect(bundle.metadataSignature).toBeTruthy();
+      expect(bundle.mediaFile).toBeTruthy();
+      expect(bundle.mediaFileName).toMatch(/\.jpg$/i);
+    });
+
+    (hasPrivateBundle ? it : it.skip)('extracts location signals from horizontal CSV', () => {
+      const zip = fs.readFileSync(PRIVATE_BUNDLE);
+      const bundle = parseBundle(new Uint8Array(zip));
+      const s = bundle.metadata.signals;
+
+      // Verify signals exist (don't assert specific coords — private data)
+      expect(typeof s['Location.Latitude']).toBe('number');
+      expect(typeof s['Location.Longitude']).toBe('number');
+      expect(s['Location.Latitude']).toBeGreaterThanOrEqual(-90);
+      expect(s['Location.Latitude']).toBeLessThanOrEqual(90);
+      expect(s['Location.Longitude']).toBeGreaterThanOrEqual(-180);
+      expect(s['Location.Longitude']).toBeLessThanOrEqual(180);
+    });
+
+    (hasPrivateBundle ? it : it.skip)('creates a valid UnsignedLocationStamp', () => {
+      const zip = fs.readFileSync(PRIVATE_BUNDLE);
+      const bundle = parseBundle(new Uint8Array(zip));
+      const stamp = createStampFromBundle(bundle, '0.1.0');
+
+      expect(stamp.lpVersion).toBe('0.2');
+      expect(stamp.plugin).toBe('proofmode');
+      expect(stamp.srs).toBe('http://www.opengis.net/def/crs/OGC/1.3/CRS84');
+      const loc = stamp.location as { type: string; coordinates: number[] };
+      expect(loc.type).toBe('Point');
+      expect(loc.coordinates).toHaveLength(2);
+      expect(stamp.temporalFootprint.start).toBeGreaterThan(0);
+      expect(stamp.temporalFootprint.end).toBeGreaterThan(stamp.temporalFootprint.start);
+      expect(stamp.signals['DeviceCheck.Attestation']).toBeTruthy();
+      expect(stamp.signals['HasPGPKey']).toBe(true);
+      expect(stamp.signals['HasOTS']).toBe(true);
+    });
+  });
+
+  describe('real 2016 Android sample', () => {
+    (hasSample2016 ? it : it.skip)('parses 2016 sample bundle', () => {
+      const zip = fs.readFileSync(SAMPLE_2016_BUNDLE);
+      const bundle = parseBundle(new Uint8Array(zip));
+
+      expect(bundle.metadata.format).toBe('csv');
+      expect(bundle.mediaFile).toBeTruthy();
+      expect(bundle.mediaFileName).toMatch(/\.jpg$/i);
+      expect(bundle.metadataSignature).toBeTruthy();
+    });
+
+    (hasSample2016 ? it : it.skip)('normalizes 2016-era field names', () => {
+      const zip = fs.readFileSync(SAMPLE_2016_BUNDLE);
+      const bundle = parseBundle(new Uint8Array(zip));
+      const s = bundle.metadata.signals;
+
+      // 2016 format uses legacy names that should alias to canonical form
+      expect(s['Timestamp']).toBeDefined();     // from CurrentDateTime0GMT
+      expect(s['FileHash']).toBeDefined();       // from SHA256
+      expect(s['File.Name']).toBeDefined();      // from File
+      expect(s['Network']).toBeDefined();        // from NetworkType
+      expect(s['File.Modified']).toBeDefined();  // from Modified
+    });
+
+    (hasSample2016 ? it : it.skip)('throws when creating stamp — no GPS in 2016 sample', () => {
+      const zip = fs.readFileSync(SAMPLE_2016_BUNDLE);
+      const bundle = parseBundle(new Uint8Array(zip));
+
+      // 2016 samples lack Location.Latitude/Longitude — stamp creation fails
+      expect(() => createStampFromBundle(bundle, '0.1.0'))
+        .toThrow('missing Location.Latitude or Location.Longitude');
     });
   });
 });
