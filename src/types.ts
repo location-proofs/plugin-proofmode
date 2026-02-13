@@ -82,6 +82,8 @@ export interface ParsedBundle {
   mediaSignature?: Uint8Array;
   /** Google SafetyNet/Play Integrity JWT */
   safetyNetToken?: string;
+  /** Apple DeviceCheck attestation (iOS) */
+  deviceCheckAttestation?: string;
   /** OpenTimestamps proof */
   otsProof?: Uint8Array;
   /** The media file data */
