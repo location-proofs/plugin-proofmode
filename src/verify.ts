@@ -112,12 +112,12 @@ export async function verifyProofModeStamp(
     const accuracy = stamp.signals['Location.Accuracy'] as number | undefined;
     const provider = stamp.signals['Location.Provider'] as string | undefined;
 
-    // Validate coordinate ranges
-    if (lat !== undefined && (lat < -90 || lat > 90)) {
+    // Validate coordinates are finite numbers in valid ranges
+    if (lat !== undefined && (typeof lat !== 'number' || !Number.isFinite(lat) || lat < -90 || lat > 90)) {
       signalsConsistent = false;
       details.invalidLatitude = lat;
     }
-    if (lon !== undefined && (lon < -180 || lon > 180)) {
+    if (lon !== undefined && (typeof lon !== 'number' || !Number.isFinite(lon) || lon < -180 || lon > 180)) {
       signalsConsistent = false;
       details.invalidLongitude = lon;
     }
