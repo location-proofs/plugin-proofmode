@@ -15,11 +15,12 @@ import type { ParsedBundle } from './types';
 export function createStampFromBundle(bundle: ParsedBundle, pluginVersion: string): UnsignedLocationStamp {
   const signals = bundle.metadata.signals;
 
-  const lat = signals['Location.Latitude'] as number | undefined;
-  const lon = signals['Location.Longitude'] as number | undefined;
+  const lat = signals['Location.Latitude'];
+  const lon = signals['Location.Longitude'];
 
-  if (lat === undefined || lon === undefined) {
-    throw new Error('ProofMode bundle missing Location.Latitude or Location.Longitude');
+  if (typeof lat !== 'number' || !Number.isFinite(lat) ||
+      typeof lon !== 'number' || !Number.isFinite(lon)) {
+    throw new Error('ProofMode bundle missing or invalid Location.Latitude/Location.Longitude');
   }
 
   // Build temporal footprint from available timestamps
