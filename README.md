@@ -3,7 +3,6 @@
 Location proof plugin using [ProofMode](https://proofmode.org/) zipfiles as stamps — mobile device-based location proofs with PGP signatures and hardware attestation.
 
 [![npm version](https://img.shields.io/npm/v/@location-proofs/plugin-proofmode.svg)](https://www.npmjs.com/package/@location-proofs/plugin-proofmode)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## What is ProofMode?
 
