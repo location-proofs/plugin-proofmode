@@ -17,6 +17,8 @@
 import type {
   LocationProofPlugin,
   Runtime,
+  RawSignals,
+  UnsignedLocationStamp,
   LocationStamp,
   StampVerificationResult,
 } from '@decentralized-geo/astral-sdk/plugins';
@@ -33,6 +35,23 @@ export class ProofModePlugin implements LocationProofPlugin {
   readonly requiredCapabilities: string[] = [];
   readonly description =
     'ProofMode device-based location proofs with PGP signatures and hardware attestation';
+
+  /**
+   * Create an UnsignedLocationStamp from raw signals.
+   *
+   * Expects signals.data.zipData to be a Uint8Array containing
+   * a ProofMode proof bundle ZIP exported from the mobile app.
+   */
+  async create(signals: RawSignals): Promise<UnsignedLocationStamp> {
+    const zipData = signals.data?.zipData;
+    if (!(zipData instanceof Uint8Array)) {
+      throw new Error(
+        'ProofModePlugin.create() requires signals.data.zipData as Uint8Array'
+      );
+    }
+    const bundle = this.parseBundle(zipData);
+    return this.createStampFromBundle(bundle);
+  }
 
   /**
    * Parse a ProofMode proof bundle ZIP and create an UnsignedLocationStamp.
