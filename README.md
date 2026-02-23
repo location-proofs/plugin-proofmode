@@ -2,8 +2,6 @@
 
 Location proof plugin using [ProofMode](https://proofmode.org/) zipfiles as stamps — mobile device-based location proofs with PGP signatures and hardware attestation.
 
-[![npm version](https://img.shields.io/npm/v/@location-proofs/plugin-proofmode.svg)](https://www.npmjs.com/package/@location-proofs/plugin-proofmode)
-
 ## What is ProofMode?
 
 [ProofMode](https://proofmode.org/) is a [Guardian Project](https://guardianproject.info/) mobile app that captures cryptographically verifiable location and sensor data when photos or videos are taken. It signs everything with PGP, adds SafetyNet/Play Integrity attestation, and optionally includes OpenTimestamps proofs.
