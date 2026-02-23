@@ -28,8 +28,9 @@ ProofMode handles evidence collection on-device. The plugin picks up where the a
 │  • Requests SafetyNet/Play Integrity attestation        │
 │  • Optionally timestamps via OpenTimestamps             │
 │  • Packages everything into a ZIP proof bundle          │
+|  • NOTE: location services must be ON!                  |
 │                                                         │
-│  Export the ZIP bundle from the device.                  │
+│  Export the ZIP bundle from the device.                 │
 └─────────────────────────┬───────────────────────────────┘
                           │
                           ▼
@@ -46,7 +47,7 @@ ProofMode handles evidence collection on-device. The plugin picks up where the a
 │                                                         │
 │  plugin.verify(stamp) → StampVerificationResult         │
 │  Checks PGP signatures, SafetyNet JWT, signal           │
-│  consistency, timestamp coherence, structure validity    │
+│  consistency, timestamp coherence, structure validity   │
 └─────────────────────────┬───────────────────────────────┘
                           │
                           ▼
@@ -54,12 +55,12 @@ ProofMode handles evidence collection on-device. The plugin picks up where the a
 │  4. EVALUATE (Astral SDK ProofsModule)                  │
 │                                                         │
 │  Bundle stamps into a proof, then evaluate credibility  │
-│  across spatial, temporal, validity, and independence    │
+│  across spatial, temporal, validity, and independence   │
 │  dimensions.                                            │
 └─────────────────────────────────────────────────────────┘
 ```
 
-> **Future:** A React Native bridge will allow apps to trigger ProofMode collection programmatically through the SDK's standard `collect()` method, removing the manual export step. For now, collection is manual.
+> **Future:** A React Native bridge will allow custom-built location-based apps to trigger ProofMode collection programmatically through the SDK's standard `collect()` method, removing the manual export step. For now, collection is manual.
 
 ## Installation
 
@@ -69,7 +70,7 @@ npm install @location-proofs/plugin-proofmode
 pnpm add @location-proofs/plugin-proofmode
 ```
 
-## Quick start
+## Quickstart
 
 ```typescript
 import { ProofModePlugin } from '@location-proofs/plugin-proofmode';
@@ -203,7 +204,3 @@ Parse a SafetyNet/Play Integrity JWT and extract integrity claims. Validates str
 ## Contributing
 
 See [CONTRIBUTING.md](https://github.com/location-proofs/.github/blob/main/CONTRIBUTING.md)
-
-## License
-
-MIT © Astral Protocol
