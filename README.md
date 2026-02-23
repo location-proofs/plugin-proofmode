@@ -1,15 +1,66 @@
 # ProofMode Plugin
 
-Location proof plugin for [ProofMode](https://proofmode.org/) - device-based location proofs with PGP signatures and hardware attestation.
+Location proof plugin for [ProofMode](https://proofmode.org/) — device-based location proofs with PGP signatures and hardware attestation.
 
 [![npm version](https://img.shields.io/npm/v/@location-proofs/plugin-proofmode.svg)](https://www.npmjs.com/package/@location-proofs/plugin-proofmode)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## What is ProofMode?
 
-[ProofMode](https://proofmode.org/) is a Guardian Project mobile app that captures cryptographically verifiable location and sensor data when photos or videos are taken. It signs everything with PGP, adds SafetyNet attestation, and optionally includes OpenTimestamps proofs.
+[ProofMode](https://proofmode.org/) is a [Guardian Project](https://guardianproject.info/) mobile app that captures cryptographically verifiable location and sensor data when photos or videos are taken. It signs everything with PGP, adds SafetyNet/Play Integrity attestation, and optionally includes OpenTimestamps proofs.
 
-This plugin parses and verifies ProofMode bundles exported from the mobile app.
+## How collection works
+
+ProofMode handles evidence collection on-device. The plugin picks up where the app leaves off — it parses, structures, and verifies the proof bundles that ProofMode produces.
+
+**The full workflow:**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  1. COLLECT (manual — on the mobile device)             │
+│                                                         │
+│  Open the ProofMode app with location services enabled. │
+│  Take a photo or video. ProofMode automatically:        │
+│  • Records GPS coordinates, accuracy, altitude, speed   │
+│  • Captures cell tower and WiFi network context         │
+│  • Logs device hardware identifiers                     │
+│  • Signs metadata with a device-local PGP key           │
+│  • Requests SafetyNet/Play Integrity attestation        │
+│  • Optionally timestamps via OpenTimestamps             │
+│  • Packages everything into a ZIP proof bundle          │
+|  • NOTE: location services must be ON!                  |
+│                                                         │
+│  Export the ZIP bundle from the device.                 │
+└─────────────────────────┬───────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│  2. PARSE + CREATE (this plugin)                        │
+│                                                         │
+│  parseBundle(zipData) → ParsedBundle                    │
+│  createStampFromBundle(bundle) → UnsignedLocationStamp  │
+└─────────────────────────┬───────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│  3. VERIFY (this plugin)                                │
+│                                                         │
+│  plugin.verify(stamp) → StampVerificationResult         │
+│  Checks PGP signatures, SafetyNet JWT, signal           │
+│  consistency, timestamp coherence, structure validity   │
+└─────────────────────────┬───────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│  4. EVALUATE (Astral SDK ProofsModule)                  │
+│                                                         │
+│  Bundle stamps into a proof, then evaluate credibility  │
+│  across spatial, temporal, validity, and independence   │
+│  dimensions.                                            │
+└─────────────────────────────────────────────────────────┘
+```
+
+> **Future:** A React Native bridge will allow custom-built location-based apps to trigger ProofMode collection programmatically through the SDK's standard `collect()` method, removing the manual export step. For now, collection is manual.
 
 ## Installation
 
@@ -19,79 +70,114 @@ npm install @location-proofs/plugin-proofmode
 pnpm add @location-proofs/plugin-proofmode
 ```
 
-## Quick Start
+## Quickstart
 
 ```typescript
 import { ProofModePlugin } from '@location-proofs/plugin-proofmode';
-import { AstralSDK } from '@decentralized-geo/astral-sdk';
 import fs from 'fs';
 
 // Initialize plugin
 const plugin = new ProofModePlugin();
 
-// Parse a ProofMode ZIP bundle
+// Parse a ProofMode ZIP bundle exported from the app
 const zipData = fs.readFileSync('proof-bundle.zip');
 const bundle = plugin.parseBundle(new Uint8Array(zipData));
 
-// Create a stamp from the bundle
+// Create a stamp from the parsed bundle
 const unsigned = plugin.createStampFromBundle(bundle);
 
-// Sign with your wallet (Ethereum, etc.)
-const stamp = await plugin.sign(unsigned, ethersSigner);
+// Add the PGP signature from the bundle as the stamp's signature
+const stamp = {
+  ...unsigned,
+  signatures: [{
+    algorithm: 'pgp',
+    value: bundle.metadataSignature
+      ? Buffer.from(bundle.metadataSignature).toString('base64')
+      : '',
+    signer: {
+      type: 'pgp-public-key' as const,
+      value: bundle.publicKey ?? '',
+    },
+  }],
+};
 
-// Verify the stamp
-const verification = await plugin.verify(stamp);
-console.log(verification.isValid); // true/false
+// Verify the stamp's internal validity
+const result = await plugin.verify(stamp);
+console.log(result.valid);              // true/false
+console.log(result.structureValid);     // required fields present?
+console.log(result.signaturesValid);    // PGP signature present and well-formed?
+console.log(result.signalsConsistent);  // coordinates, timestamps, accuracy coherent?
 ```
 
 ## Integration with Astral SDK
 
 ```typescript
-const astral = new AstralSDK({ chainId: 84532, signer: wallet });
+import { AstralSDK } from '@decentralized-geo/astral-sdk';
+import { ProofModePlugin } from '@location-proofs/plugin-proofmode';
+
+const astral = new AstralSDK({ chainId: 84532 });
 
 // Register the plugin
 astral.plugins.register(new ProofModePlugin());
 
-// Create a location claim
+// ... parse and create stamp as above ...
+
+// Bundle a claim with one or more stamps
 const claim = {
+  lpVersion: '0.2',
+  locationType: 'geojson-point',
   location: { type: 'Point', coordinates: [-73.9857, 40.7484] },
+  srs: 'EPSG:4326',
+  subject: { type: 'ethereum-address', value: '0x...' },
   radius: 100,
-  time: { start: timestamp, end: timestamp + 3600 }
+  time: { start: timestamp, end: timestamp + 3600 },
 };
 
-// Create proof with ProofMode stamp
 const proof = astral.proofs.create(claim, [stamp]);
 
-// SDK evaluates spatial/temporal credibility
+// Evaluate multidimensional credibility
 const credibility = await astral.proofs.verify(proof);
-console.log(credibility.score); // 0.0 - 1.0
+// credibility.dimensions.spatial   — distance between stamp and claim
+// credibility.dimensions.temporal  — time overlap
+// credibility.dimensions.validity  — signature and structure checks
+// credibility.dimensions.independence — source diversity
 ```
 
-## What the Plugin Does
+## What the plugin verifies
 
-**Internal validation** (the `verify()` method checks):
-- ✅ PGP signature of metadata
-- ✅ SafetyNet JWT structure and claims
-- ✅ Signal consistency (coordinate ranges, timestamp coherence)
-- ✅ Bundle structure and required fields
+The `verify()` method checks internal stamp validity:
 
-**Evaluation** (handled by SDK's `ProofsModule.verify()`):
-- Spatial distance measurements (haversine)
-- Temporal overlap calculations
-- Multidimensional credibility scoring
+- **Structure** — required fields present, correct `lpVersion` and `plugin` values
+- **Signatures** — PGP signature exists with valid format and signer info
+- **Signal consistency** — coordinate ranges, provider-accuracy coherence, timestamp drift
+- **SafetyNet/Play Integrity** — JWT structure and integrity claims (if present)
 
-## Architecture
+Spatial and temporal evaluation (how well does this stamp support a given claim?) is handled by the SDK's `ProofsModule.verify()`, not by the plugin directly.
 
-ProofMode bundles contain:
-- **Metadata** (CSV/JSON) - GPS, WiFi, cell towers, device sensors (~5KB)
-- **PGP signatures** - Device-signed cryptographic proofs
-- **SafetyNet JWT** - Android hardware attestation (optional)
-- **OpenTimestamps proof** - Blockchain timestamping (optional)
-- **Media files** - Photos/videos (discarded during verification)
+## What's in a ProofMode bundle
 
-The plugin extracts the cryptographic proof materials (~15-20KB) and wraps them in a `LocationStamp` for SDK interoperability.
+ProofMode ZIP bundles contain:
 
-## API Reference
+| Component | Size | Purpose |
+|-----------|------|---------|
+| Metadata (CSV/JSON) | ~5KB | GPS, WiFi, cell towers, device sensors |
+| PGP signatures | ~1KB | Device-signed cryptographic proofs of metadata and media |
+| PGP public key | ~2KB | The device's signing key |
+| SafetyNet JWT | ~2KB | Android hardware attestation (optional) |
+| OpenTimestamps proof | ~1KB | Blockchain timestamping (optional) |
+| Media files | variable | Photos/videos (not needed for verification) |
+
+The plugin extracts the cryptographic proof materials (~15-20KB) and wraps them in a `LocationStamp` for SDK interoperability. Media files can be discarded for verification purposes.
+
+## Supported runtimes
+
+| Runtime | Status |
+|---------|--------|
+| Node.js | Supported |
+| Browser | Supported |
+| React Native | Not yet — planned for a future release with a native bridge to the ProofMode SDK |
+
+## API reference
 
 ### `parseBundle(zipData: Uint8Array): ParsedBundle`
 
@@ -99,22 +185,22 @@ Parse a ProofMode ZIP bundle into structured components.
 
 ### `createStampFromBundle(bundle: ParsedBundle): UnsignedLocationStamp`
 
-Create a LocationStamp from parsed bundle (extracts essentials, discards media).
+Create an `UnsignedLocationStamp` from a parsed bundle. Extracts location, temporal footprint, and all signal fields. Discards media.
 
 ### `verify(stamp: LocationStamp): Promise<StampVerificationResult>`
 
-Verify stamp's internal validity (PGP signatures, SafetyNet, signal consistency).
+Verify a stamp's internal validity — structure, signatures, and signal consistency.
+
+### `parseSafetyNetJWT(jwt: string): SafetyNetResult | null`
+
+Parse a SafetyNet/Play Integrity JWT and extract integrity claims. Validates structure but does not verify the certificate chain (documented v0 limitation).
 
 ## Documentation
 
-- [Full Plugin Documentation](https://docs.astral.global/plugins/proofmode)
-- [Plugin Development Guide](https://docs.astral.global/plugins/development)
 - [Astral SDK](https://github.com/DecentralizedGeo/astral-sdk)
+- [ProofMode](https://proofmode.org/)
+- [Guardian Project](https://guardianproject.info/)
 
 ## Contributing
 
 See [CONTRIBUTING.md](https://github.com/location-proofs/.github/blob/main/CONTRIBUTING.md)
-
-## License
-
-MIT © Astral Protocol
