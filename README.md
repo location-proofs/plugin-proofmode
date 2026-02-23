@@ -1,14 +1,14 @@
-# ProofMode Plugin
+# Proofmode Plugin
 
-Location proof plugin using [ProofMode](https://proofmode.org/) zipfiles as stamps — mobile device-based location proofs with PGP signatures and hardware attestation.
+Location proof plugin using [Proofmode](https://proofmode.org/) zipfiles as stamps — mobile device-based location proofs with PGP signatures and hardware attestation.
 
 ## What is ProofMode?
 
-[ProofMode](https://proofmode.org/) is a [Guardian Project](https://guardianproject.info/) mobile app that captures cryptographically verifiable location and sensor data when photos or videos are taken. It signs everything with PGP, adds SafetyNet/Play Integrity attestation, and optionally includes OpenTimestamps proofs.
+[Proofmode](https://proofmode.org/) is a [Guardian Project](https://guardianproject.info/) mobile app that captures cryptographically verifiable location and sensor data when photos or videos are taken. It signs everything with PGP, adds SafetyNet/Play Integrity attestation, and optionally includes OpenTimestamps proofs.
 
 ## How collection works
 
-ProofMode handles evidence collection on-device. The plugin picks up where the app leaves off — it parses, structures, and verifies the proof bundles that ProofMode produces.
+Proofmode handles evidence collection on-device. The plugin picks up where the app leaves off — it parses, structures, and verifies the proof bundles that Proofmode produces.
 
 **The full workflow:**
 
@@ -16,8 +16,8 @@ ProofMode handles evidence collection on-device. The plugin picks up where the a
 ┌─────────────────────────────────────────────────────────┐
 │  1. COLLECT (manual — on the mobile device)             │
 │                                                         │
-│  Open the ProofMode app with location services enabled. │
-│  Take a photo or video. ProofMode automatically:        │
+│  Open the Proofmode app with location services enabled. │
+│  Take a photo or video. Proofmode automatically:        │
 │  • Records GPS coordinates, accuracy, altitude, speed   │
 │  • Captures cell tower and WiFi network context         │
 │  • Logs device hardware identifiers                     │
@@ -57,7 +57,7 @@ ProofMode handles evidence collection on-device. The plugin picks up where the a
 └─────────────────────────────────────────────────────────┘
 ```
 
-> **Future:** A React Native bridge will allow custom-built location-based apps to trigger ProofMode collection programmatically through the SDK's standard `collect()` method, removing the manual export step. For now, collection is manual.
+> **Future:** A React Native bridge will allow custom-built location-based apps to trigger Proofmode collection programmatically through the SDK's standard `collect()` method, removing the manual export step. For now, collection is manual.
 
 ## Installation
 
@@ -151,9 +151,9 @@ The `verify()` method checks internal stamp validity:
 
 Spatial and temporal evaluation (how well does this stamp support a given claim?) is handled by the SDK's `ProofsModule.verify()`, not by the plugin directly.
 
-## What's in a ProofMode bundle
+## What's in a Proofmode bundle
 
-ProofMode ZIP bundles contain:
+Proofmode ZIP bundles contain:
 
 | Component | Size | Purpose |
 |-----------|------|---------|
@@ -172,13 +172,13 @@ The plugin extracts the cryptographic proof materials (~15-20KB) and wraps them 
 |---------|--------|
 | Node.js | Supported |
 | Browser | Supported |
-| React Native | Not yet — planned for a future release with a native bridge to the ProofMode SDK |
+| React Native | Not yet — planned for a future release with a native bridge to the Proofmode SDK |
 
 ## API reference
 
 ### `parseBundle(zipData: Uint8Array): ParsedBundle`
 
-Parse a ProofMode ZIP bundle into structured components.
+Parse a Proofmode ZIP bundle into structured components.
 
 ### `createStampFromBundle(bundle: ParsedBundle): UnsignedLocationStamp`
 
@@ -195,7 +195,7 @@ Parse a SafetyNet/Play Integrity JWT and extract integrity claims. Validates str
 ## Documentation
 
 - [Astral SDK](https://github.com/DecentralizedGeo/astral-sdk)
-- [ProofMode](https://proofmode.org/)
+- [Proofmode](https://proofmode.org/)
 - [Guardian Project](https://guardianproject.info/)
 
 ## Contributing
