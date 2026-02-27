@@ -1,3 +1,6 @@
 node_modules/
 dist/
 *.tsbuildinfo
+
+# Private test bundles with real location data
+src/__tests__/fixtures/private-*.zip

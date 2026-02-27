@@ -26,6 +26,20 @@ import { parseJSON } from './json';
  * pubkey.asc                  — PGP public key
  * ```
  */
+/** Known media file extensions (lowercase, with leading dot). */
+const MEDIA_EXTENSIONS = new Set([
+  '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.heic', '.heif',
+  '.tiff', '.tif', '.avif',
+  '.mp4', '.mov', '.avi', '.mkv', '.webm', '.3gp',
+  '.mp3', '.wav', '.aac', '.ogg', '.m4a',
+]);
+
+function isMediaFile(name: string): boolean {
+  const dot = name.lastIndexOf('.');
+  if (dot < 0) return false;
+  return MEDIA_EXTENSIONS.has(name.substring(dot).toLowerCase());
+}
+
 export function parseBundle(zipData: Uint8Array): ParsedBundle {
   const entries = unzipSync(zipData);
 
@@ -36,6 +50,7 @@ export function parseBundle(zipData: Uint8Array): ParsedBundle {
   let metadataSignature: Uint8Array | undefined;
   let mediaSignature: Uint8Array | undefined;
   let safetyNetToken: string | undefined;
+  let deviceCheckAttestation: string | undefined;
   let otsProof: Uint8Array | undefined;
   let mediaFile: Uint8Array | undefined;
   let mediaFileName: string | undefined;
@@ -46,12 +61,13 @@ export function parseBundle(zipData: Uint8Array): ParsedBundle {
     files.push({ name, data });
 
     const lower = name.toLowerCase();
+    const baseName = lower.split('/').pop() ?? lower;
 
     if (lower.endsWith('.proof.csv')) {
       csvData = data;
     } else if (lower.endsWith('.proof.json')) {
       jsonData = data;
-    } else if (lower === 'pubkey.asc' || lower.endsWith('/pubkey.asc')) {
+    } else if (baseName === 'pubkey.asc') {
       publicKey = decoder.decode(data);
     } else if (lower.endsWith('.proof.csv.asc')) {
       metadataSignature = data;
@@ -62,15 +78,19 @@ export function parseBundle(zipData: Uint8Array): ParsedBundle {
       }
     } else if (lower.endsWith('.gst')) {
       safetyNetToken = decoder.decode(data);
+    } else if (lower.endsWith('.devicecheck')) {
+      deviceCheckAttestation = decoder.decode(data);
     } else if (lower.endsWith('.ots')) {
       otsProof = data;
-    } else if (lower.endsWith('.asc') && !lower.includes('proof') && lower !== 'pubkey.asc') {
+    } else if (lower.endsWith('.txt')) {
+      // Documentation files (e.g. HowToVerifyProofData.txt) — skip
+    } else if (lower.endsWith('.asc') && !lower.includes('proof') && baseName !== 'pubkey.asc') {
       mediaSignature = data;
-    } else if (!lower.endsWith('.asc') && !lower.endsWith('.gst') && !lower.endsWith('.ots')) {
-      // Assume any remaining file is the media file
+    } else if (isMediaFile(name)) {
       mediaFile = data;
       mediaFileName = name;
     }
+    // Unknown extensions are silently ignored — they're still in files[]
   }
 
   // Parse metadata from CSV or JSON
@@ -103,6 +123,7 @@ export function parseBundle(zipData: Uint8Array): ParsedBundle {
     metadataSignature,
     mediaSignature,
     safetyNetToken,
+    deviceCheckAttestation,
     otsProof,
     mediaFile,
     mediaFileName,

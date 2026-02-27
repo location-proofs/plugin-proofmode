@@ -50,14 +50,28 @@ export function createStampFromBundle(bundle: ParsedBundle, pluginVersion: strin
     allSignals['SafetyNet.JWT'] = bundle.safetyNetToken;
   }
 
+  // Add DeviceCheck info if present (iOS)
+  if (bundle.deviceCheckAttestation) {
+    allSignals['DeviceCheck.Attestation'] = bundle.deviceCheckAttestation;
+  }
+
   // Note presence of OTS proof
   if (bundle.otsProof) {
     allSignals['HasOTS'] = true;
   }
 
-  // Note presence of PGP key
+  // PGP provenance: key presence flag + actual key and signature as evidence
   if (bundle.publicKey) {
     allSignals['HasPGPKey'] = true;
+    allSignals['PGP.PublicKey'] = bundle.publicKey;
+  }
+
+  if (bundle.metadataSignature && bundle.metadataSignature.length > 0) {
+    let binary = '';
+    for (let i = 0; i < bundle.metadataSignature.length; i++) {
+      binary += String.fromCharCode(bundle.metadataSignature[i]);
+    }
+    allSignals['PGP.MetadataSignature'] = btoa(binary);
   }
 
   // File hash for integrity
@@ -72,7 +86,7 @@ export function createStampFromBundle(bundle: ParsedBundle, pluginVersion: strin
       type: 'Point',
       coordinates: [lon, lat], // GeoJSON: [lon, lat]
     },
-    srs: 'EPSG:4326',
+    srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
     temporalFootprint: {
       start: startTime,
       end: endTime,

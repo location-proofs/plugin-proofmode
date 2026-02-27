@@ -21,6 +21,8 @@ export function createSyntheticBundle(options: {
   includePublicKey?: boolean;
   includeSafetyNet?: boolean;
   includeOTS?: boolean;
+  includeDeviceCheck?: boolean;
+  includeTxtFile?: boolean;
 } = {}): Uint8Array {
   const lat = options.lat ?? 40.7484;
   const lon = options.lon ?? -73.9857;
@@ -95,6 +97,14 @@ export function createSyntheticBundle(options: {
 
   if (options.includeOTS) {
     files[`${fileHash}.ots`] = encoder.encode('fake-ots-proof');
+  }
+
+  if (options.includeDeviceCheck) {
+    files[`${fileHash}.devicecheck`] = encoder.encode('device-check-token-data');
+  }
+
+  if (options.includeTxtFile) {
+    files['HowToVerifyProofData.txt'] = encoder.encode('Documentation about verification');
   }
 
   return zipSync(files);
